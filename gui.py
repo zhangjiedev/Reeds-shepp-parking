@@ -139,6 +139,7 @@ class CarCanvas(QWidget):
         self.setMouseTracking(True)
         self.update_gui_callback = None
         self.recalculate_path_callback = None
+        self.clear_path_callback = None
         self.path_info = ""
 
     def paintEvent(self, event):
@@ -273,6 +274,31 @@ class CarCanvas(QWidget):
     def mouseReleaseEvent(self, event):
         self.selected_car = None
 
+    def wheelEvent(self, event):
+        """Adjusts the selected car's angle using the mouse wheel."""
+        if self.selected_car:
+            angle_step = 5.0  # Degrees to change per wheel tick
+
+            # Check wheel scroll direction
+            if event.angleDelta().y() > 0:  # Scrolled up
+                self.selected_car.angle += angle_step
+            else:  # Scrolled down
+                self.selected_car.angle -= angle_step
+
+            # Wrap the angle to stay within the 0-360 degree range
+            self.selected_car.angle = (self.selected_car.angle + 360) % 360
+
+            # Update the control panel GUI to reflect the new angle
+            if self.update_gui_callback:
+                self.update_gui_callback(self.cars.index(self.selected_car))
+
+            # Clear any existing path since the car's state has changed
+            if self.clear_path_callback:
+                self.clear_path_callback()
+
+            # Repaint the canvas to show the car's new orientation
+            self.update()
+
     def is_border_obstacle(self, pos):
         """Checks if a given (x, y) tuple is a position reserved for the border."""
         x, y = pos
@@ -345,6 +371,7 @@ class MainWindow(QMainWindow):
         self.car_canvas = CarCanvas(self.cars)
         self.car_canvas.update_gui_callback = self.update_control_gui
         self.car_canvas.recalculate_path_callback = self.calculate_path
+        self.car_canvas.clear_path_callback = self.clear_path
         main_layout.addWidget(self.car_canvas, 1)
 
         control_group = QGroupBox("Controls")
